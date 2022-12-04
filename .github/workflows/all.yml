@@ -13,5 +13,5 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
         cache: 'maven'
-        paths: */**/surefire-reports/*.xml
+        paths: '*/**/surefire-reports/*.xml'
     - run: ./mvnw test -fae
