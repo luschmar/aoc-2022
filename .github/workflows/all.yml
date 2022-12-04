@@ -3,15 +3,19 @@ on:
     branches:
       - "main"
 jobs:
-  day-01:
+  build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-java@v2
-    - uses: test-summary/action@v2
       with:
         distribution: 'temurin'
         java-version: '17'
         cache: 'maven'
         paths: '*/**/surefire-reports/*.xml'
     - run: ./mvnw test -fae
+    - name: Test Summary
+      uses: test-summary/action@dist
+      with:
+        paths: '*/**/surefire-reports/*.xml'
+      if: always()
