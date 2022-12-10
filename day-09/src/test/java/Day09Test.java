@@ -1,11 +1,9 @@
 import org.junit.jupiter.params.ParameterizedTest;
 
-import java.util.Deque;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -83,34 +81,24 @@ class Day09Test {
 			}
 		}
 		
-		private void tryFollowDirectionWtf(Day09Test.Dir dir, int index) {
-			IntStream.range(-1,  2).forEach(i -> {
-				IntStream.range(-1, 2).forEach(j -> {
-					// can dock north?
-					if (x[index]+1 == x[index+1]+i && y[index] == y[index+1]+j) {
-						x[index+1] = x[index]+i;
-						y[index+1] = y[index+1]+j;
-					}
-					// can dock south?
-					if (x[index]-1 == x[index+1]+i && y[index] == y[index+1]+j) {
-						x[index+1] = x[index]-1;
-						y[index+1] = y[index+1]+j;
-					}
-					// can dock east?
-					if (x[index] == x[index+1]+i && y[index]+1 == y[index+1]+j) {
-						x[index+1] = x[index+1]+i;
-						y[index+1] = y[index]+1;
-					}
-					// can dock west?
-					if (x[index] == x[index+1]+i && y[index]-1 == y[index+1]+j) {
-						x[index+1] = x[index+1]+i;
-						y[index+1] = y[index]-1;
-					}
-				});
-			});
+		private void tryFollowDirection(Day09Test.Dir dir, int index) {
+			var north = new Candidate(x[index]+1, y[index], calculateDistance(x[index]+1, y[index], x[index+1], y[index+1]));
+			var south = new Candidate(x[index]-1, y[index], calculateDistance(x[index]-1, y[index], x[index+1], y[index+1]));
+			var west = new Candidate(x[index], y[index]-1, calculateDistance(x[index], y[index]-1, x[index+1], y[index+1]));
+			var east = new Candidate(x[index], y[index]+1, calculateDistance(x[index], y[index]+1, x[index+1], y[index+1]));
+
+			var pos = Stream.of(north, south, west, east).min(Comparator.comparing(Candidate::distance)).get();
+			x[index+1] = pos.x;
+			y[index+1] = pos.y;
 		}
 
-		private void tryFollowDirection(Day09Test.Dir dir, int i) {
+		private double calculateDistance(int x1, int y1, int x2, int y2) {
+			 double ac = Math.abs(y2 - y1);
+			    double cb = Math.abs(x2 - x1);
+			    return Math.hypot(ac, cb);
+		}
+
+		private void tryFollowDirectionBuggy(Day09Test.Dir dir, int i) {
 			System.out.println(i);
 			switch (dir) {
 			case U -> {
@@ -181,6 +169,8 @@ class Day09Test {
 	enum Dir {
 		U, D, L, R
 	}
+	
+	record Candidate(int x, int y, double distance) {}
 
 	private boolean isInRange(int x1, int y1, int x2, int y2) {
 		// Check do nothing
@@ -198,7 +188,7 @@ class Day09Test {
 	@AocFileSource(inputs = {
 			 @AocInputMapping(input = "test.txt", solution = "1"),
 			@AocInputMapping(input = "test2.txt", solution = "36"),
-	// @AocInputMapping(input = "input.txt", solution = "1")
+	@AocInputMapping(input = "input.txt", solution = "1")
 	})
 	void part2(Stream<String> input, String solution) {
 		var inputList = input.toList();
