@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -49,39 +50,137 @@ class Day09Test {
 			switch (dir) {
 			case U -> {
 				x[0]++;
-				moveTail(Dir.U);
+				moveTail();
 				visitedCoordinates.add(x[lenght - 1] + ":" + y[lenght - 1]);
 			}
 			case D -> {
 				x[0]--;
-				moveTail(Dir.D);
+				moveTail();
 				visitedCoordinates.add(x[lenght - 1] + ":" + y[lenght - 1]);
 			}
 			case L -> {
 				y[0]--;
-				moveTail(Dir.L);
+				moveTail();
 				visitedCoordinates.add(x[lenght - 1] + ":" + y[lenght - 1]);
 			}
 			case R -> {
 				y[0]++;
-				moveTail(Dir.R);
+				moveTail();
 				visitedCoordinates.add(x[lenght - 1] + ":" + y[lenght - 1]);
 			}
 
 			default -> throw new IllegalArgumentException("Unexpected value: " + dir);
 			}
+			printState();
 		}
 
-		private void moveTail(Dir dir) {
-			for (int i = 0; i < (lenght-1); i++) {
+		private void moveTail() {
+			System.out.println();
+			
+			for (int i = lenght-1; i > 0; i--) {
 				// do nothing
-				if (!isInRange(x[i], y[i], x[i + 1], y[i + 1])) {
-					tryFollowDirection(dir, i);
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
 				}
 			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+			for (int i = lenght-1; i > 0; i--) {
+				// do nothing
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+			}
+
+			for (int i = lenght-1; i > 0; i--) {
+				if (!isInRange(x[i-1], y[i-1], x[i], y[i])) {
+					tryFollowDirection(i-1);
+				}
+				// do nothing
+			}
+			
+			
 		}
 		
-		private void tryFollowDirection(Day09Test.Dir dir, int index) {
+		private void printState() {
+			var minX = Arrays.stream(x).min().getAsInt();
+			var maxX = Arrays.stream(x).max().getAsInt();
+			var minY = Arrays.stream(y).min().getAsInt();
+			var maxY = Arrays.stream(y).max().getAsInt();
+			
+			
+			IntStream.range(-20, 20).forEach(i -> {
+				IntStream.range(-20, 20).forEach(j -> {
+					var inv = i *-1;
+					if(inv == 0 && j == 0) {
+						System.out.print("s");
+						return;
+					}
+					if(IntStream.range(0, lenght).anyMatch(a -> x[a] == inv &&  y[a] == j )) {
+						var p = IntStream.range(0, lenght).filter(a -> x[a] == inv &&  y[a] == j ).findFirst().getAsInt();
+						System.out.print(""+p);
+					}else {
+						System.out.print(".");
+					}
+				});
+				System.out.println();
+			});;
+			System.out.println();
+		}
+
+		private void tryFollowDirection(int index) {
 			var north = new Candidate(x[index]+1, y[index], calculateDistance(x[index]+1, y[index], x[index+1], y[index+1]));
 			var south = new Candidate(x[index]-1, y[index], calculateDistance(x[index]-1, y[index], x[index+1], y[index+1]));
 			var west = new Candidate(x[index], y[index]-1, calculateDistance(x[index], y[index]-1, x[index+1], y[index+1]));
@@ -174,14 +273,22 @@ class Day09Test {
 
 	private boolean isInRange(int x1, int y1, int x2, int y2) {
 		// Check do nothing
-		return IntStream.range(-1,  2).anyMatch(i -> {
-			return IntStream.range(-1, 2).anyMatch(j -> {
+		var range = IntStream.rangeClosed(-1,  1).anyMatch(i -> {
+			return IntStream.rangeClosed(-1, 1).anyMatch(j -> {
 				if (x1 == x2 + i && y1 == y2 + j) {
 					return true;
 				}
 				return false;
 			});
 		});
+		
+		if(range) {
+			System.out.println(x1+":"+y1+" in range "+x2+":"+y2);
+
+			return true;
+		}
+		System.out.println(x1+":"+y1+" not in range "+x2+":"+y2);
+		return false;
 	}
 
 	@ParameterizedTest
@@ -205,7 +312,7 @@ class Day09Test {
 			for (int i = 0; i < steps; i++) {
 				r.move(dir, set);
 			}
-
+			r.printState();
 		}
 
 		assertEquals(Integer.parseInt(solution), set.size());
