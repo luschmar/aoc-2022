@@ -4,6 +4,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -19,29 +20,170 @@ class Day13Test {
 		var inputList = input.toList();
 		var count = inputList.stream().count();
 
-		var resultArr = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toElfPair(i, inputList)).filter(ElfPair::valid).mapToInt(ElfPair::getIndex).toArray();
-		var result = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toElfPair(i, inputList)).filter(ElfPair::valid).mapToInt(ElfPair::getIndex).sum();
-
-		System.out.println(Arrays.stream(resultArr).toArray());
+		//var resultArr = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toObjectSolver(i, inputList)).filter(Solver::valid).mapToInt(Solver::getIndex).toArray();
+		var result = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toObjectSolver(i, inputList)).filter(Solver::valid).mapToInt(Solver::getIndex).sum();
 
 		assertEquals(Integer.parseInt(solution), result);
 	}
+	
+	interface Solver {
+		boolean valid();
+		int getIndex();
+	}
+	
+	class ObjectSolver implements Solver {
+		
+		private Object left;
+		private Object right;
+		private int index;
 
-	class ElfPair {
+		public ObjectSolver(int index, String leftStr, String rightStr) {
+			this.index = index +1;
+			this.left = toObject(leftStr);
+			this.right = toObject(rightStr);
+		}
+		
+		Object toObject(String input) {
+			var stack = new ArrayDeque<>();
+			var objects = new ArrayList<>();
+			stack.add(objects);
+			var strRegister = "";
+			for(int i = 0; i < input.length(); i++){
+				if(input.charAt(i) == '[') {
+					var a = new ArrayList<>();
+					((List)stack.peek()).add(a);
+					stack.push(a);
+				}
+				else if(input.charAt(i) == ']') {
+					if(!"".equals(strRegister)){
+						((List)stack.peek()).add(Integer.parseInt(strRegister));
+					}
+					stack.pop();
+					strRegister = "";
+				}
+				else if(input.charAt(i) == ',') {
+					if(!"".equals(strRegister)){
+						((List)stack.peek()).add(Integer.parseInt(strRegister));
+					}
+					strRegister = "";
+				}
+				else {
+					strRegister = input.charAt(i) + strRegister;
+				}
+			}
+			
+			return objects;
+		}
+
+		@Override
+		public boolean valid() {
+			System.out.println();
+			System.out.println();
+			System.out.println("Solve "+index);
+			var r = solve(this.left, this.right).get();
+			
+			if(r) {
+				System.out.println("Input is valid");
+			} else {
+				System.out.println("Input is wrong");
+			}
+			
+			return r;
+		}
+		
+		Optional<Boolean> solve(Object left, Object right) {
+			printCompare(left, right);
+			if(left instanceof List && right instanceof List) {
+				var leftList = (List)left;
+				var rigthList = (List)right;
+				var min = Math.min(leftList.size(), rigthList.size());
+				
+				for(int i = 0; i < min ; i++) {
+					var res = solve(leftList.get(i), rigthList.get(i));
+					if(res.isPresent()) {
+						return res;
+					}
+				}
+				
+				if(leftList.size() < rigthList.size()) {
+					return Optional.of(true);
+				}
+				
+				if(leftList.size() > rigthList.size()) {
+					return Optional.of(false);
+				}
+				return Optional.empty();
+			}
+			if(left instanceof Integer && right instanceof Integer) {
+				var leftInt = (Integer) left;
+				var rightInt = (Integer) right;
+				
+				if(leftInt.intValue() < rightInt.intValue()) {
+					return Optional.of(true);
+				}
+				if(leftInt.intValue() > rightInt.intValue()) {
+					return Optional.of(false);
+				}
+				return Optional.empty();
+			}
+
+			if(left instanceof List && right instanceof Integer) {
+				var leftList = (List) left;
+				var rightInt = (Integer) right;
+				return solve(leftList, List.of(rightInt));
+			}
+			
+			if(left instanceof Integer && right instanceof List) {
+				var leftInt = (Integer) left;
+				var rightList = (List) right;
+				return solve(List.of(leftInt), rightList);
+			}
+			
+			throw new IllegalArgumentException();
+		}
+
+		private void printCompare(Object l, Object r) {
+			System.out.print("Compare ");
+			System.out.print(printValue(l));
+			System.out.print(" vs ");
+			System.out.print(printValue(r));
+			System.out.println();
+			
+		}
+
+		private String printValue(Object value) {
+			if(value instanceof Integer) {
+				return ((Integer)value).toString();
+			}
+			String res = "[";
+			res = res + ((List)value).stream().map(this::printValue).collect(Collectors.joining(", "));
+			res = res + "]";
+			return res;
+		}
+
+		@Override
+		public int getIndex() {
+			return index;
+		}
+		
+	}
+
+	class ComaSolver implements Solver {
 		private final int index;
 		private final List<NestedNumber> pair1;
 		private final List<NestedNumber> pair2;
 		private final String pair1Str;
 		private final String pair2Str;
 
-		ElfPair(int index, String pair1, String pair2) {
+		ComaSolver(int index, String pair1, String pair2) {
 			this.index = index +1;
 			this.pair1Str = pair1;
 			this.pair2Str = pair2;
 			this.pair1 = transformToList(pair1);
 			this.pair2 = transformToList(pair2);
 		}
-
+		
+		@Override
 		public boolean valid() {
 			var min = Integer.min(pair1.size(), pair2.size());
 
@@ -110,9 +252,14 @@ class Day13Test {
 
 	}
 
-	ElfPair toElfPair(int i, List<String> input) {
-		return new ElfPair(i, input.get(i*3), input.get(i*3+1));
+	ComaSolver toElfPair(int i, List<String> input) {
+		return new ComaSolver(i, input.get(i*3), input.get(i*3+1));
 	}
+	
+	ObjectSolver toObjectSolver(int i, List<String> input) {
+		return new ObjectSolver(i, input.get(i*3), input.get(i*3+1));
+	}
+	
 	@ParameterizedTest
 	@CsvSource(delimiterString = ";", textBlock = """
     [];[3]
@@ -124,7 +271,7 @@ class Day13Test {
     [[[]],[[7,[5,9,7]],[[6,4,9,9],1,[6,1,7,10,6],[0,6,5,1,4],6],[[0,9,8,5,4]],[[6,8],[],[1,9,2,5],[6,2,7]]],[[],[5],5]];[[[2,6,8,[1,6]],[[4,5,4],[6,10,3,8,7],[7,5,1,5,9]],5],[8,[[8,1,7]],[0]]]
     """)
 	void testValid(String p1, String p2){
-		var elf = new ElfPair(0, p1, p2);
+		var elf = new ComaSolver(0, p1, p2);
 		assertTrue(elf.valid());
 	}
 
@@ -138,7 +285,7 @@ class Day13Test {
     [[[[7,1,6],[1]],5,[9,6,10]]];[]
     """)
 	void testInValid(String p1, String p2){
-		var elf = new ElfPair(0, p1, p2);
+		var elf = new ComaSolver(0, p1, p2);
 		assertFalse(elf.valid());
 	}
 
@@ -157,34 +304,6 @@ class Day13Test {
 	@Test
 	void test() {
 		var string = "[1,[2,[3,[4,[5,6,7]]]],8,9]";
-		var stack = new ArrayDeque<>();
-		var objects = new ArrayList<>();
-		stack.add(objects);
-		var strRegister = "";
-		for(int i = 0; i < string.length(); i++){
-			if(string.charAt(i) == '[') {
-				var a = new ArrayList<>();
-				((List)stack.peek()).add(a);
-				stack.push(a);
-			}
-			else if(string.charAt(i) == ']') {
-				if(!"".equals(strRegister)){
-					((List)stack.peek()).add(Integer.parseInt(strRegister));
-				}
-				stack.pop();
-				strRegister = "";
-			}
-			else if(string.charAt(i) == ',') {
-				if(!"".equals(strRegister)){
-					((List)stack.peek()).add(Integer.parseInt(strRegister));
-				}
-				strRegister = "";
-			}
-			else {
-				strRegister = string.charAt(i) + strRegister;
-			}
-		}
 
-		System.out.println(objects);
 	}
 }
