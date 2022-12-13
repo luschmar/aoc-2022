@@ -1,9 +1,8 @@
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -14,39 +13,65 @@ class Day13Test {
 	@ParameterizedTest
 	@AocFileSource(inputs = { 
 			@AocInputMapping(input = "test.txt", solution = "13"),
-			@AocInputMapping(input = "input.txt", solution = "13")
+			@AocInputMapping(input = "input.txt", solution = "6478")
 			})
 	void part1(Stream<String> input, String solution) {
 		var inputList = input.toList();
 		var count = inputList.stream().count();
 
-		//var resultArr = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toObjectSolver(i, inputList)).filter(Solver::valid).mapToInt(Solver::getIndex).toArray();
-		var result = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toObjectSolver(i, inputList)).filter(Solver::valid).mapToInt(Solver::getIndex).sum();
+		var resultObj = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toObjectSolver(i, inputList)).filter(Solver::valid).mapToInt(Solver::getIndex).toArray();
 
-		assertEquals(Integer.parseInt(solution), result);
+		System.out.println();
+		System.out.println("Result:");
+		System.out.println(Arrays.stream(resultObj).mapToObj(Integer::toString).collect(Collectors.joining(",")));
+
+		assertEquals(Integer.parseInt(solution), Arrays.stream(resultObj).sum());
 	}
 	
-	interface Solver {
-		boolean valid();
-		int getIndex();
+	@Disabled
+	@ParameterizedTest
+	@AocFileSource(inputs = { 
+			@AocInputMapping(input = "test.txt", solution = "13"),
+			@AocInputMapping(input = "input.txt", solution = "13")
+			})
+	void part1_coma(Stream<String> input, String solution) {
+		var inputList = input.toList();
+		var count = inputList.stream().count();
+
+		var resultComa = IntStream.rangeClosed(0, (int)(count / 3)).mapToObj(i -> toElfPair(i, inputList)).filter(Solver::valid).mapToInt(Solver::getIndex).toArray();
+
+		System.out.println();
+		System.out.println("Result:");
+		System.out.println(Arrays.stream(resultComa).mapToObj(Integer::toString).collect(Collectors.joining(",")));
+
+		assertEquals(Integer.parseInt(solution), Arrays.stream(resultComa).sum());
 	}
 	
-	class ObjectSolver implements Solver {
+	class Package implements Comparable<Package> {
+		private Object obj;
 		
-		private Object left;
-		private Object right;
-		private int index;
-
-		public ObjectSolver(int index, String leftStr, String rightStr) {
-			this.index = index +1;
-			this.left = toObject(leftStr);
-			this.right = toObject(rightStr);
+		public Package(String str) {
+			this.obj = ((List)toObject(str)).get(0);
 		}
 		
+		@Override
+		public String toString() {
+			return printValue(obj);
+		}
+		
+		private String printValue(Object value) {
+			if(value instanceof Integer) {
+				return ((Integer)value).toString();
+			}
+			String res = "[";
+			res = res + ((List)value).stream().map(this::printValue).collect(Collectors.joining(","));
+			res = res + "]";
+			return res;
+		}
+
 		Object toObject(String input) {
 			var stack = new ArrayDeque<>();
-			var objects = new ArrayList<>();
-			stack.add(objects);
+			stack.add(new ArrayList<>());
 			var strRegister = "";
 			for(int i = 0; i < input.length(); i++){
 				if(input.charAt(i) == '[') {
@@ -68,11 +93,121 @@ class Day13Test {
 					strRegister = "";
 				}
 				else {
-					strRegister = input.charAt(i) + strRegister;
+					strRegister = strRegister+input.charAt(i);
 				}
 			}
 			
-			return objects;
+			return stack.pop();
+		}
+
+		@Override
+		public int compareTo(Package left) {
+			return solve(this.obj, left.obj).get() ? -1 : 1;
+		}
+		
+		Optional<Boolean> solve(Object left, Object right) {
+			if(left instanceof List && right instanceof List) {
+				var leftList = (List)left;
+				var rigthList = (List)right;
+				var min = Math.min(leftList.size(), rigthList.size());
+				
+				for(int i = 0; i < min ; i++) {
+					var res = solve(leftList.get(i), rigthList.get(i));
+					if(res.isPresent()) {
+						// we have a result; go home
+						return res;
+					}
+				}
+				// left list is consumed; true
+				if(leftList.size() < rigthList.size()) {
+					return Optional.of(true);
+				}
+
+				// right list is consumed; false
+				if(leftList.size() > rigthList.size()) {
+					return Optional.of(false);
+				}
+				// Same size no result - search next
+				return Optional.empty();
+			}
+			if(left instanceof Integer && right instanceof Integer) {
+				var leftInt = (Integer) left;
+				var rightInt = (Integer) right;
+				
+				// left value is smaller; true
+				if(leftInt.intValue() < rightInt.intValue()) {
+					return Optional.of(true);
+				}
+				// right value is smaller; true
+				if(leftInt.intValue() > rightInt.intValue()) {
+					return Optional.of(false);
+				}
+				// same value - search next 
+				return Optional.empty();
+			}
+
+			if(left instanceof List && right instanceof Integer) {
+				var leftList = (List) left;
+				var rightInt = (Integer) right;
+				return solve(leftList, List.of(rightInt));
+			}
+			
+			if(left instanceof Integer && right instanceof List) {
+				var leftInt = (Integer) left;
+				var rightList = (List) right;
+				return solve(List.of(leftInt), rightList);
+			}
+			
+			throw new IllegalArgumentException();
+		}
+		
+	}
+	
+	interface Solver {
+		boolean valid();
+		int getIndex();
+	}
+	
+	class ObjectSolver implements Solver {
+		private Object left;
+		private Object right;
+		private int index;
+
+		public ObjectSolver(int index, String leftStr, String rightStr) {
+			this.index = index +1;
+			this.left = ((List)toObject(leftStr)).get(0);
+			this.right = ((List)toObject(rightStr)).get(0);
+		}
+		
+		Object toObject(String input) {
+			var stack = new ArrayDeque<>();
+			stack.add(new ArrayList<>());
+			var strRegister = "";
+			for(int i = 0; i < input.length(); i++){
+				if(input.charAt(i) == '[') {
+					var a = new ArrayList<>();
+					((List)stack.peek()).add(a);
+					stack.push(a);
+				}
+				else if(input.charAt(i) == ']') {
+					if(!"".equals(strRegister)){
+						((List)stack.peek()).add(Integer.parseInt(strRegister));
+					}
+					stack.pop();
+					strRegister = "";
+				}
+				else if(input.charAt(i) == ',') {
+					if(!"".equals(strRegister)){
+						((List)stack.peek()).add(Integer.parseInt(strRegister));
+					}
+					strRegister = "";
+				}
+				else {
+					strRegister = strRegister+input.charAt(i);
+				}
+			}
+			
+			return stack.pop();
 		}
 
 		@Override
@@ -83,9 +218,9 @@ class Day13Test {
 			var r = solve(this.left, this.right).get();
 			
 			if(r) {
-				System.out.println("Input is valid");
+				System.out.println("in the right order");
 			} else {
-				System.out.println("Input is wrong");
+				System.out.println("is wrong");
 			}
 			
 			return r;
@@ -101,29 +236,35 @@ class Day13Test {
 				for(int i = 0; i < min ; i++) {
 					var res = solve(leftList.get(i), rigthList.get(i));
 					if(res.isPresent()) {
+						// we have a result; go home
 						return res;
 					}
 				}
-				
+				// left list is consumed; true
 				if(leftList.size() < rigthList.size()) {
 					return Optional.of(true);
 				}
-				
+
+				// right list is consumed; false
 				if(leftList.size() > rigthList.size()) {
 					return Optional.of(false);
 				}
+				// Same size no result - search next
 				return Optional.empty();
 			}
 			if(left instanceof Integer && right instanceof Integer) {
 				var leftInt = (Integer) left;
 				var rightInt = (Integer) right;
 				
+				// left value is smaller; true
 				if(leftInt.intValue() < rightInt.intValue()) {
 					return Optional.of(true);
 				}
+				// right value is smaller; true
 				if(leftInt.intValue() > rightInt.intValue()) {
 					return Optional.of(false);
 				}
+				// same value - search next 
 				return Optional.empty();
 			}
 
@@ -156,7 +297,7 @@ class Day13Test {
 				return ((Integer)value).toString();
 			}
 			String res = "[";
-			res = res + ((List)value).stream().map(this::printValue).collect(Collectors.joining(", "));
+			res = res + ((List)value).stream().map(this::printValue).collect(Collectors.joining(","));
 			res = res + "]";
 			return res;
 		}
@@ -165,7 +306,6 @@ class Day13Test {
 		public int getIndex() {
 			return index;
 		}
-		
 	}
 
 	class ComaSolver implements Solver {
@@ -246,6 +386,7 @@ class Day13Test {
 		public int getIndex() {
 			return index;
 		}
+
 	}
 
 	record NestedNumber (Integer value, int lvl, int lvlUp, int lvlDown) {
@@ -269,12 +410,16 @@ class Day13Test {
     [[6],[]];[[7],[],[[2]],[],[[[5,0,0,2],1],[]]]
     [[1,2],3,4];[[1,2],3,4,5]
     [[[]],[[7,[5,9,7]],[[6,4,9,9],1,[6,1,7,10,6],[0,6,5,1,4],6],[[0,9,8,5,4]],[[6,8],[],[1,9,2,5],[6,2,7]]],[[],[5],5]];[[[2,6,8,[1,6]],[[4,5,4],[6,10,3,8,7],[7,5,1,5,9]],5],[8,[[8,1,7]],[0]]]
+    [[9,[3,[9,8,10,5],4,[8],[8,7,0,5]],6],[],[5]];[[[[10,4,8],[1,6,8,3]]],[4,4,7],[[[9,2,6],[2,8],[5,9,0],2,0],5],[]]
     """)
 	void testValid(String p1, String p2){
-		var elf = new ComaSolver(0, p1, p2);
+		var elf = new ObjectSolver(0, p1, p2);
 		assertTrue(elf.valid());
+		var coma = new ComaSolver(0, p1, p2);
+		assertTrue(coma.valid());
 	}
 
+	@Disabled
 	@ParameterizedTest
 	@CsvSource(delimiterString = ";", textBlock = """
     [9];[[8,7,6]]
@@ -289,21 +434,34 @@ class Day13Test {
 		assertFalse(elf.valid());
 	}
 
-
 	@ParameterizedTest
 	@AocFileSource(inputs = { 
-			@AocInputMapping(input = "test.txt", solution = "1"),
-			@AocInputMapping(input = "input.txt", solution = "1") 
+			@AocInputMapping(input = "test.txt", solution = "140"),
+			@AocInputMapping(input = "input.txt", solution = "21922") 
 			})
 	void part2(Stream<String> input, String solution) {
-		var inputList = input.toList();
+		//var inputList = input.toList();
+		
+		var unList = input.filter(s -> !"".equals(s)).map(l -> new Package(l)).toList();
+		var list = new ArrayList();
+		list.addAll(unList);
+		list.add(new Package("[[2]]"));
+		list.add(new Package("[[6]]"));
+		
+		Collections.sort(list);
+		
+		int a = 0;
+		int b = 0;
+		for(int i = 0; i < list.size();i++) {
+			if("[[2]]".equals(list.get(i).toString())) {
+				a = i+1;
+			}
+			if("[[6]]".equals(list.get(i).toString())) {
+				b = i+1;
+			}
+		}
+		
 
-		assertEquals(Integer.parseInt(solution), inputList.size());
-	}
-
-	@Test
-	void test() {
-		var string = "[1,[2,[3,[4,[5,6,7]]]],8,9]";
-
+		assertEquals(Integer.parseInt(solution), a*b);
 	}
 }
